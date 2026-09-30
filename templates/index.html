@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI Helpdesk</title>
+    <style>
+
+* {
+    box-sizing: border-box;
+}m,
+
+body {
+    margin: 0;
+    font-family: Arial;
+    background:lightblue;
+    padding: 40px 20px;
+}
+
+/* Main chatbot */
+.container {
+    width: 650px;
+    margin: auto;
+    background: white;
+    border-radius: 18px;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    background: #123b63;
+    color: white;
+    text-align: center;
+    padding: 25px;
+}
+
+.header h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    text-align: center;
+}
+
+.subtitle {
+    margin: 8px 0;
+    color: #0a2547;
+    font-size: 15px;
+    text-align: center;
+}
+
+/* Suggested questions */
+.Suggestions {
+    padding: 15px;
+    text-align: center;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.Suggestions button {
+    padding: 8px 16px;
+    margin: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    background: white;
+    color: #6ea7e0;
+}
+
+.Suggestions button:hover {
+    background: #123b63;
+    color: white;
+}
+
+/* Chat */
+#chat-box {
+    height: 320px;
+    padding: 20px;
+    overflow-y: auto;
+    background: white;
+}
+
+/* Bot message */
+.bot-msg {
+    background: #f1f5f9;
+    color: #1e293b;
+    padding: 13px 16px;
+    margin: 12px 0;
+    border-radius: 6px 16px 16px 16px;
+    max-width: 82%;
+    line-height: 1.5;
+}
+
+/* User message */
+.user-msg {
+    background: gray;
+    color: white;
+    padding: 13px 16px;
+    margin: 12px 0 12px auto;
+    border-radius: 16px 16px 6px 16px;
+    max-width: 82%;
+    line-height: 1.5;
+}
+
+/* Time */
+.time {
+    font-size: 10px;
+    margin-top: 6px;
+    text-align: right;
+
+}
+
+/* Input */
+.input-area {
+    display: flex;
+    gap: 10px;
+    padding: 18px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+input {
+    flex: 1;
+    padding: 13px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 25px;
+    outline: none;
+    font-size: 14px;
+}
+
+input:focus {
+    border-color: #2563a6;
+}
+
+.input-area button {
+    padding: 13px 24px;
+    border: none;
+    border-radius: 25px;
+    background: #2563a6;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.input-area button:hover {
+    background: #123b63;
+}
+  
+
+    </style>
+</head>
+<body>
+    <div class="container">       <!--whole UI class as a parent class-->
+        <h1>GenAI Academic Helpdesk</h1>
+        <p class="subtitle"> Your Intelligent Campus Assistant</p>
+     
+        <!--Suggested Questions -->
+        <div class="Suggestions">
+            <button onclick="setquestion('What is the Library Timings?')">Library</button>
+            <button onclick="setquestion('What are the Placement Procedures ?')">Placement</button>
+            <button onclick="setquestion('What is the Hostel Accommodation ?')">Hostel</button>
+            <button onclick="setquestion('When do Exams  will be scheduled?')">Exams</button>
+        </div>
+
+        <div id="chat-box">
+            <div class="bot-msg">
+                Hello! I am your GenAI Acedemic Assistant.
+                Ask something, anything about:
+                Syllabus,Placements,Exams,Hostel and more.
+            </div> <!--bot msg-->
+        </div>    <!-- chat-box-->
+
+        <!-- input area-->
+        <div class="input-area">
+            <input type="text" id="question" placeholder="Ask your question here...">
+            <button onclick="ask()">
+                Send
+            </button>
+        </div> <!-- input-area-->
+
+    </div>
+    <script>
+        function setquestion(text){
+            document.getElementById("question").value = text;
+        }
+
+         async function ask(){
+            const input = document.getElementById("question");
+            const q = input.value.trim();
+
+            if (q === "") return;
+
+            const box = document.getElementById("chat-box");
+            const userMessage = document.createElement("div");
+            userMessage.className = "user-msg";
+            userMessage.textContent = q;
+            const time = document.createElement("div");
+            time.className = "time";
+            time.textContent = new Date().toLocaleTimeString();
+            userMessage.appendChild(time);
+            box.appendChild(userMessage);
+
+            const loading = document.createElement("div");
+            loading.className = "bot-msg";
+            loading.textContent = "AI is typing...";
+            box.appendChild(loading);
+            input.value = "";
+
+            box.scrollTop = box.scrollHeight;
+
+            try {
+                const response = await fetch("/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: q })
+                });
+                const data = await response.json();
+                loading.remove();
+
+                const botMessage = document.createElement("div");
+                botMessage.className = "bot-msg";
+                botMessage.textContent = data.answer || "No answer was returned.";
+                if (data.source) {
+                    botMessage.textContent += `\nSource: ${data.source}, page ${data.page}`;
+                }
+                box.appendChild(botMessage);
+            } catch (error) {
+                loading.remove();
+                const botMessage = document.createElement("div");
+                botMessage.className = "bot-msg";
+                botMessage.textContent = "Could not get a response. Check that the server is running and try again.";
+                box.appendChild(botMessage);
+                console.error(error);
+            }
+
+            box.scrollTop = box.scrollHeight;
+
+        }
+
+        // Press Enter to send
+    document.getElementById("question").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            ask();
+        }
+    })
+    ;
+
+        
+    </script>
+</body>
+</html>
